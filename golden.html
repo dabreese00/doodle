@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<head>
+<style>
+  body {
+    margin: 0;
+  }
+  canvas {
+    display: block;
+  }
+</style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+
+    const spiralOrigin = [400, 300];
+    const colors = ["blue", "red", "green", "purple"];
+    const numSpirals = 37;
+    const numTurns = 4;
+
+    function handleResize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      drawSpirals(spiralOrigin, colors, numSpirals, numTurns);
+    }
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
+
+    function addVector(a,b){
+      return a.map((e, i) => e + b[i]);
+    }
+
+    function polar(r, theta) {
+      return [r * Math.cos(theta), r * Math.sin(theta)];
+    }
+
+    function incrementFibonacci(lastThree) {
+      [lastlast, last, current] = lastThree;
+      return [last, current, last + current];
+    }
+
+    function drawSpirals(spiralOrigin, colors, numSpirals, numTurns) {
+      const thetaStep = 2 * Math.PI / numSpirals;
+      const innerThetaStep = 2 * Math.PI / numTurns;
+
+      let theta = 0;
+      for (let i = 0; i < numSpirals; i++) {
+        let lastLastSpiralSize = 0;
+        let lastSpiralSize = 1;
+        let spiralSize = 1;
+        let spiralNext = spiralOrigin;
+        context.beginPath();
+        context.moveTo(spiralNext[0], spiralNext[1]);
+        context.strokeStyle = colors[i];
+
+        let innerTheta = theta;
+        while (spiralNext[0] >= 0 && spiralNext[1] >= 0) {
+          direction = polar(1, innerTheta);
+          context.lineTo(spiralNext[0], spiralNext[1]);
+          spiralNext = addVector(spiralNext, direction.map((x) => x * spiralSize));
+          [lastLastSpiralSize, lastSpiralSize, spiralSize] = incrementFibonacci([lastLastSpiralSize, lastSpiralSize, spiralSize])
+          innerTheta += innerThetaStep;
+        }
+
+        direction = polar(1, innerTheta);
+        context.lineTo(spiralNext[0], spiralNext[1]);
+
+        context.stroke();
+
+        theta += thetaStep;
+      }
+    }
+
+    drawSpirals(spiralOrigin, colors, numSpirals, numTurns);
+    
+  </script>
+</body>

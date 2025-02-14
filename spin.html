@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<head>
+<style>
+  body {
+    margin: 0;
+    background: rgb(0 0 0);
+  }
+  canvas {
+    display: block;
+  }
+</style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+    const maxSpirals = 60;
+    const framesPerSpiral = 3;
+    const framesPerTurn = 3000;
+
+    function handleResize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
+    function addVector(a,b){
+      return a.map((e, i) => e + b[i]);
+    }
+
+    function polar(r, theta) {
+      return [r * Math.cos(theta), r * Math.sin(theta)];
+    }
+
+    function incrementFibonacci(lastThree) {
+      [current, last, lastlast] = lastThree;
+      return [current + last, current, last];
+    }
+
+    function getColour(hue) {
+      return `hsl(${hue}deg, 100%, 70%)`;
+    }
+
+    function nearlyInbounds(point) {
+      return (
+        point[0] > -8 * canvas.width &&
+        point[0] < 9 * canvas.width &&
+        point[1] > -8 * canvas.height &&
+        point[1] < 9 * canvas.height
+        );
+    }
+
+    let phase = 1;
+    let numSpirals = maxSpirals;
+    let startTheta = 0;
+    let t = 0;
+    let outerHue = 100;
+    let huePhase = 1;
+    function drawSpirals() {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      let spiralOrigin = [canvas.width / 2, canvas.height / 2];
+      let hue = outerHue;
+      let hueStep = 255 / numSpirals;
+      let theta = startTheta;
+      let thetaStep = 2 * Math.PI / numSpirals;
+      for (let i = 0; i < numSpirals; i++) {
+        let innerTheta = theta;
+        let spiralSizeHist = [1, 1, 0];
+        let spiralNext = spiralOrigin;
+        context.beginPath();
+        context.moveTo(spiralNext[0], spiralNext[1]);
+        context.strokeStyle = getColour(hue);
+        while (nearlyInbounds(spiralNext)) {
+          direction = polar(1, innerTheta);
+          context.lineTo(spiralNext[0], spiralNext[1]);
+          spiralNext = addVector(spiralNext, direction.map((x) => x * spiralSizeHist[0]));
+          spiralSizeHist = incrementFibonacci(spiralSizeHist);
+          innerTheta += Math.PI / 2;
+        }
+        context.stroke();
+        theta += thetaStep;
+        hue += hueStep;
+      }
+      startTheta += 2 * Math.PI / framesPerTurn;
+      if (t % framesPerSpiral == 0) {
+        if (numSpirals === 0 || numSpirals === maxSpirals) { phase = -phase; }
+        numSpirals += phase;
+        if (outerHue === 0 || outerHue === 255) { huePhase = -huePhase; }
+        outerHue += huePhase;
+      }
+      t++;
+      requestAnimationFrame(drawSpirals);
+    }
+
+    drawSpirals();
+    
+  </script>
+</body>
