@@ -18,15 +18,16 @@
     const context = canvas.getContext("2d");
     const phi = (1 + Math.sqrt(5)) / 2;
     const zoomReset = 3;  // don't ask me why
+    let spiralOrigin;
 
     function handleResize() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      spiralOrigin = [ canvas.width / 2, canvas.height / 2 ];
     }
 
     window.addEventListener("resize", handleResize);
     handleResize();
-    const spiralOrigin = [ canvas.width / 2, canvas.height / 2 ];
 
     function addVector(a,b){
       return a.map((e, i) => e + b[i]);
@@ -69,31 +70,44 @@
         );
     }
 
-    let zoomSpeed = 0.05;
-    let zoom = 0;
-    let outerTheta = 0;
-
-    function zoomSpiral() {
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.strokeStyle = getColour(100);
+    function spiral(origin, spiralStartTheta, zoom) {
       context.beginPath();
-      context.moveTo(spiralOrigin[0], spiralOrigin[1]);
-      let theta = outerTheta;
+      context.moveTo(origin[0], origin[1]);
       let i = 1;
-      let spiralNext = spiralOrigin;
-      console.log("zoom");
-      console.log(zoom);
+      let spiralNext = origin;
+      let theta = spiralStartTheta;
       while (nearlyInbounds(spiralNext)) {
         direction = fromPolar(1, theta);
         spiralSize = fib(i + zoom);
-        console.log(spiralSize);
         spiralNext = addVector(spiralNext, direction.map((x) => x * spiralSize));
         context.lineTo(spiralNext[0], spiralNext[1]);
         i++;
         theta += Math.PI / 2;
       }
       context.stroke();
-      if (zoom >= zoomReset) { zoom = 0; outerTheta += Math.PI / 2; }
+    }
+
+    function multiSpiral(origin, outerHue, firstSpiralTheta, numSpirals, zoom) {
+      let hue = outerHue;
+      let hueStep = 255 / numSpirals;
+      let theta = firstSpiralTheta;
+      let thetaStep = 2 * Math.PI / numSpirals;
+      for (let i = 0; i < numSpirals; i++) {
+        context.strokeStyle = getColour(hue);
+        spiral(origin, theta, zoom);
+        theta += thetaStep;
+        hue += hueStep;
+      }
+    }
+
+    let zoomSpeed = 0.01;
+    let zoom = 0;
+    let firstTheta = 0;
+
+    function zoomSpiral() {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      multiSpiral(spiralOrigin, 100, firstTheta, 60, zoom);
+      if (zoom >= zoomReset) { zoom = 0; firstTheta += Math.PI / 2; }
       else { zoom += zoomSpeed; }
       requestAnimationFrame(zoomSpiral);
     }
