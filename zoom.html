@@ -112,7 +112,18 @@
       requestAnimationFrame(zoomSpiral);
     }
 
-    zoomSpiral();
+    let thetaStep = 2 * Math.PI / 3000;
+
+    function zoomSpinSpiral() {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      multiSpiral(spiralOrigin, 100, firstTheta, 60, zoom);
+      firstTheta += thetaStep;
+      if (zoom >= zoomReset) { zoom = 0; firstTheta += Math.PI / 2; }
+      else { zoom += zoomSpeed; }
+      requestAnimationFrame(zoomSpinSpiral);
+    }
+
+    zoomSpinSpiral();
 
   </script>
 </body>
