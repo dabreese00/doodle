@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<head>
+<title>Spin</title>
+<style>
+  body {
+    margin: 0;
+    background: rgb(0 0 0);
+  }
+  canvas {
+    display: block;
+  }
+</style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+    const phi = (1 + Math.sqrt(5)) / 2;
+    const zoomReset = 3;  // don't ask me why
+
+    function handleResize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    const spiralOrigin = [ canvas.width / 2, canvas.height / 2 ];
+
+    function addVector(a,b){
+      return a.map((e, i) => e + b[i]);
+    }
+
+    function fromPolar(r, theta) {
+      return [r * Math.cos(theta), r * Math.sin(theta)];
+    }
+
+    // can't figure out how to scale this one smoothly
+    // function fib(n) {
+    //   let fibs = new Map();
+    //   if (n == 0 || n == 1) { return 1; }
+    //   else if (fibs.has(n)) { return fibs.get(n); }
+    //   else {
+    //     return fib(n-1) + fib(n-2);
+    //   }
+    // }
+
+    // doesn't work, returns NaN for non-integer n
+    //function fib(n) {
+    //  return (Math.pow(phi, n) - Math.pow(-phi, -n)) / (2 * phi - 1);
+    //}
+
+    // this one works pretty well
+    function fib(n) {
+      return Math.round(Math.pow(phi, n) / Math.sqrt(5));
+    }
+
+    function getColour(hue) {
+      return `hsl(${hue}deg, 100%, 70%)`;
+    }
+
+    function nearlyInbounds(point) {
+      return (
+        point[0] > -8 * canvas.width &&
+        point[0] < 9 * canvas.width &&
+        point[1] > -8 * canvas.height &&
+        point[1] < 9 * canvas.height
+        );
+    }
+
+    let zoomSpeed = 0.05;
+    let zoom = 0;
+    let outerTheta = 0;
+
+    function zoomSpiral() {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.strokeStyle = getColour(100);
+      context.beginPath();
+      context.moveTo(spiralOrigin[0], spiralOrigin[1]);
+      let theta = outerTheta;
+      let i = 1;
+      let spiralNext = spiralOrigin;
+      console.log("zoom");
+      console.log(zoom);
+      while (nearlyInbounds(spiralNext)) {
+        direction = fromPolar(1, theta);
+        spiralSize = fib(i + zoom);
+        console.log(spiralSize);
+        spiralNext = addVector(spiralNext, direction.map((x) => x * spiralSize));
+        context.lineTo(spiralNext[0], spiralNext[1]);
+        i++;
+        theta += Math.PI / 2;
+      }
+      context.stroke();
+      if (zoom >= zoomReset) { zoom = 0; outerTheta += Math.PI / 2; }
+      else { zoom += zoomSpeed; }
+      requestAnimationFrame(zoomSpiral);
+    }
+
+    zoomSpiral();
+
+  </script>
+</body>
