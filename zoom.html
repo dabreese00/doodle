@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <head>
-<title>Spin</title>
+<title>Zoom</title>
 <style>
   body {
     margin: 0;
@@ -18,6 +18,11 @@
     const context = canvas.getContext("2d");
     const phi = (1 + Math.sqrt(5)) / 2;
     const zoomReset = 3;  // don't ask me why
+    const zoomSpeed = 0.02;
+    const maxSpirals = 120;
+    const framesPerSpiral = 3;
+    const framesPerTurn = 500;
+    const framesPerHueCycle = 3;
     let spiralOrigin;
 
     function handleResize() {
@@ -100,26 +105,30 @@
       }
     }
 
-    let zoomSpeed = 0.01;
     let zoom = 0;
     let firstTheta = 0;
-
-    function zoomSpiral() {
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      multiSpiral(spiralOrigin, 100, firstTheta, 60, zoom);
-      if (zoom >= zoomReset) { zoom = 0; firstTheta += Math.PI / 2; }
-      else { zoom += zoomSpeed; }
-      requestAnimationFrame(zoomSpiral);
-    }
-
-    let thetaStep = 2 * Math.PI / 3000;
+    let thetaStep = 2 * Math.PI / framesPerTurn;
+    let phase = 1;
+    let numSpirals = maxSpirals;
+    let t = 0;
+    let outerHue = 100;
+    let huePhase = 1;
 
     function zoomSpinSpiral() {
       context.clearRect(0, 0, canvas.width, canvas.height);
-      multiSpiral(spiralOrigin, 100, firstTheta, 60, zoom);
+      multiSpiral(spiralOrigin, outerHue, firstTheta, numSpirals, zoom);
       firstTheta += thetaStep;
       if (zoom >= zoomReset) { zoom = 0; firstTheta += Math.PI / 2; }
       else { zoom += zoomSpeed; }
+      if (t % framesPerSpiral == 0) {
+        if (numSpirals === 0 || numSpirals === maxSpirals) { phase = -phase; }
+        numSpirals += phase;
+      }
+      if (t % framesPerHueCycle == 0) {
+        if (outerHue === 0 || outerHue === 255) { huePhase = -huePhase; }
+        outerHue += huePhase;
+      }
+      t++;
       requestAnimationFrame(zoomSpinSpiral);
     }
 
