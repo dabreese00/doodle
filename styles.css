@@ -1,0 +1,22 @@
+body {
+  width: 600px;
+  margin: 0 auto;
+  font-family: "Nimbus Sans", sans-serif;
+  text-align: left;
+  background-color: #222222;
+  color: white;
+}
+a {
+  color: beige;
+}
+h1 {
+  text-align: center;
+}
+.subtitle {
+  font-size: 20px;
+  text-align: center;
+}
+.callout {
+  background-color: #224444;
+  text-align: center;
+}
