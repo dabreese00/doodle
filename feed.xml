@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Doodling around</title>
+        <link>https://doodle.dabreese00.net/</link>
+        <description>Some funny web doodle bits.</description>
+        <language>en-us</language>
+        <atom:link href="https://doodle.dabreese00.net/feed.xml" rel="self" type="application/rss+xml" />
+        <item>
+            <title>Notes: A Case for Feminism in Programming Language Design, by Felienne Hermans</title>
+            <pubDate>Tue, 25 Feb 2025</pubDate>
+            <guid>075e9749-69ec-4e46-a6e2-39467606abed</guid>
+            <link>https://doodle.dabreese00.net/feminism-in-pl-design.html</link>
+            <description>My notes on a talk by Felienne Hermans.</description>
+        </item>
+    </channel>
+</rss>
