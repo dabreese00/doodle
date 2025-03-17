@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<head>
+  <title>uxn diagram</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="alternate" type="application/rss+xml" title="Doodle" href="https://doodle.dabreese00.net/feed.xml" />
+</head>
+<body>
+  <h1>uxn diagram</h1>
+  <p>I've been learning to program the <a href="https://100r.co/site/uxn.html">uxn virtual machine</a>.  I've had a lot of fun so far.</p>
+  <p>The creators of uxn (100 rabbits) and other enthusiasts have already created and shared some really great resources for learning about uxn.  But I felt something was missing for me personally.</p>
+  <p>Specifically, I wanted a single diagram that showed me the whole machine I'm working with; zoomed-out, highlighting all the important parts.</p>
+  <p>I bet this already exists somewhere.  But I wasn't finding it.  So I made the diagram I wanted to see.</p>
+  <h2>Diagram</h2>
+  <img src="uxn-diagram.png" />
+  <p>That's it!  That's the whole machine.  I think.  (The diagram could use some cleaning up, but it gets the job done for me.)</p>
+  <h2>Companion references</h2>
+  <p>Key reference resources (to use together with this diagram):</p>
+  <ul>
+    <li><a href="https://wiki.xxiivv.com/site/varvara.html">The Varvara specification</a> for the structure and function of IO/dev.</li>
+    <li><a href="https://wiki.xxiivv.com/site/uxntal_opcodes.html">The opcode reference</a> for manipulating the stacks, PC, and Main memory.</li>
+    <li><a href="https://compudanzas.net/uxn_tutorial.html">Compudanzas' tutorial</a> and <a href="https://wiki.xxiivv.com/site/uxntal_syntax.html">uxntal syntax</a> for writing programs in uxntal.</a>
+  </ul>
+  <h2>How it works</h2>
+  <p>OK, fine, since you asked... Here's how it works.</p>
+  <p>(I think it's something like this, anyway.)</p>
+  <p class="callout">If you're reading this and I'm wrong, I'd love to receive a toot from you about it <a href="https://mas.to/@dabreese00">@dabreese00@mas.to</a>.</p>
+  <h3>Memory</h3>
+  <p>Each of these parts you see in the diagram (WS, RS, IO/dev, and Main memory) is just a different type of <em>memory</em>.  That means they store bytes.</p>
+  <p>The IO/dev and Main memory sections are <em>addressable</em>.  That means you can read or write any individual stored byte, on demand, by specifying that byte's <em>address</em>.</p>
+  <p>The WS and RS are <em>stacks</em>.  That means they are <em>not</em> addressable, instead you can mostly only add or remove bytes to or from one end of the stack, one byte at a time.</p>
+  <h3>Program counter</h3>
+  <p>The PC is the program counter.  It points at an address in Main memory, and moves around to different addresses while the program executes.</p>
+  <p>uxn uses the program counter to keep track of what computation step to do next.</p>
+  <h3>Loading a ROM</h3>
+  <p>When you load a ROM file into uxn, it copies the contents of that ROM (a bunch of bytes) into Main memory, and sets the program counter to the address <span class="verbatim">0100</span>.  Then it begins executing.</p>
+  <h3>opcodes</h3>
+  <p>uxn looks at the single byte in Main memory that the program counter is currently pointing at.</p>
+  <p>It treats that byte as an <a href="https://wiki.xxiivv.com/site/uxntal_opcodes.html">opcode</a>, and performs the operation specified by that opcode.</p>
+  <p>Then it moves the program counter forward to the next byte (unless the opcode says otherwise).</p>
+  <p>The first thing you'll do when learning to program the uxn machine, is learn a handful of useful opcodes, which you can use to tell uxn what to do.</p>
+  <h3>Input and output</h3>
+  <p>The IO/dev section is short for "input output/devices".  It's special because while it looks and acts like memory, it's not actually about storing data.  It's really your secret window to the outside world.</p>
+  <p>If uxn reads and writes these bytes, it can have effects like putting pixels on the screen, or responding to keyboard presses, or other cool stuff.</p>
+  <p>To see all the ins and outs of how this works, <a href="https://wiki.xxiivv.com/site/varvara.html">the Varvara specification</a> is the source.</p>
+  <p>Input and output is the other first thing you'll learn about how to program uxn.</p>
+  <h2>Writing programs for uxn</h2>
+  <h3>ROM files</h3>
+  <p>A ROM file is the format for programs that uxn knows how to read.  But usually we don't write a ROM file directly, because it's too hard.  It looks basically like this:</p>
+  <pre>
+0000000 0060 a02a 2000 2880 a037 4000 2a80 a037
+0000010 4001 2c80 8037 8002 172f 01a0 8021 3720
+0000020 8000 3628 8021 3728 0280 2f80 a017 7ff0
+0000030 0880 a037 d6f0 0a80 a037 b2f0 0c80 6c37
+0000040 6600 ffff 7eff 183c                    
+0000048
+  </pre>
+  <h3>uxntal</h3>
+  <p><a href="https://wiki.xxiivv.com/site/uxntal.html">uxntal</a> is a programming language that was also created by 100 rabbits.</p>
+  <p>uxntal is much easier for humans to read and write than a ROM file.</p>
+  <p>A program that you write in uxntal can be translated automatically into a ROM file, for uxn to read.</p>
+  <p>To learn how to read and write uxntal, and to translate it into ROM files, Devine Lu Linvega's website (link above) is a good resource, and also compudanzas has a really helpful <a href="https://compudanzas.net/uxn_tutorial.html">tutorial</a> (including a <a href="https://youtu.be/LrNuq_JgaOA">video</a>).</p>
+  <h3>Thanks for reading</h3>
+  <p>I think that's all I'm going to cover here for now.  I was really just going to share the diagram, but I got a little carried away.</p>
+  <p>It's fun to learn what awesome stuff you can do with a very simple computer!</p>
+  </body>

@@ -26,3 +26,7 @@ img {
   background-color: #224444;
   text-align: center;
 }
+.verbatim {
+  font-family: monospace;
+  font-size: 1.1em;
+}
