@@ -7,6 +7,13 @@
         <language>en-us</language>
         <atom:link href="https://doodle.dabreese00.net/feed.xml" rel="self" type="application/rss+xml" />
         <item>
+            <title>Cellular</title>
+            <pubDate>Thursday, 27 Nov 2025</pubDate>
+            <guid>1d3d408f-eab2-4db9-8993-3893d40177d3</guid>
+            <link>https://doodle.dabreese00.net/cellular.html</link>
+            <description>A simple cellular automata demo</description>
+        </item>
+        <item>
             <title>Meia lua</title>
             <pubDate>Friday, 15 Aug 2025</pubDate>
             <guid>37b4c7d4-69b3-4ec2-be13-e3691cda6beb</guid>
