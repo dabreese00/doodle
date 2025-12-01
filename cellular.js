@@ -1,18 +1,8 @@
-const NUM_COLUMNS = 100;
-const NUM_ROWS = 100;
-const FRAME_DURATION_MS = 1000;
+const START_COLUMNS = 200;
+const START_ROWS = 200;
+const FRAME_DURATION_MS = 100;
 
-function getPosition(x, y) {
-    table = document.querySelector("table");
-    row = table.rows[y];
-    return row.children[x];
-}
-
-function lightUp(box) {
-    getPosition(box.x, box.y).className = "light";
-}
-
-function neighborhood(x, y) {
+function neighborhood(x, y, world) {
     const naiveNbhd = [
         [x-1, y-1],
         [x,   y-1],
@@ -29,9 +19,9 @@ function neighborhood(x, y) {
         let y = naiveNbhd[i][1];
         if (
             x >= 0
-            && x < NUM_COLUMNS
+            && x < world.num_columns
             && y >= 0
-            && y < NUM_ROWS
+            && y < world.num_rows
         ) {
             nbhd.push(naiveNbhd[i]);
         }
@@ -39,43 +29,77 @@ function neighborhood(x, y) {
     return nbhd;
 }
 
-function Cell(x, y, className) {
+function Cell(x, y, world) { // Constructor
     this.x = x;
     this.y = y;
-    this.nextClassName = className;
-    physical_cell = getPosition(this.x, this.y);
-    physical_cell.className = this.nextClassName;
-    physical_cell.addEventListener("click", function (e) {
-        e.currentTarget.className = "alive";
+    this.world = world;
+    this.element = document.createElement("td");
+    this.nextClassName = "dead";
+    this.element.className = this.nextClassName;
+    this.element.addEventListener("click", function (e) {
+        if (e.currentTarget.className === "alive") {
+            e.currentTarget.className = "dead";
+        } else {
+            e.currentTarget.className = "alive";
+        }
     });
-    physical_cell.addEventListener("mouseenter", function (e) {
+    this.element.addEventListener("mouseenter", function (e) {
         if (e.buttons === 1) {
             e.currentTarget.className = "alive";
         }
     });
 }
 
-Cell.prototype.neighbors = function () {
-    return neighborhood(this.x, this.y)
+function World(num_rows, num_columns) { // Constructor
+    this.num_rows = num_rows;
+    this.num_columns = num_columns;
+    this.cells = [];
+    this.element = null;
 }
 
-const theWorld = [];
-
-for (i = 0; i < NUM_COLUMNS; i++) {
-    theWorld.push([]);
-    for (let j = 0; j < NUM_ROWS; j++) {
-        const c = new Cell(i, j, "dead");
-        theWorld[i].push(c);
-    }
+World.prototype.getCell = function (x, y) {
+    return this.cells[y][x];
 }
 
-Cell.prototype.lightNeighbors = function () {
-    const nbs = this.neighbors();
-    for (let i = 0; i < nbs.length; i++) {
-        x = nbs[i][0];
-        y = nbs[i][1];
-        lightUp(theWorld[x][y]);
+World.prototype.generateTable = function () {
+    this.element = document.createElement("table");
+    const tblBody = document.createElement("tbody");
+    for (let i = 0; i < this.num_rows; i++) {
+        const row = document.createElement("tr");
+        this.cells.push([]);
+        for (let j = 0; j < this.num_columns; j++) {
+            const c = new Cell(j, i, this);
+            this.cells[i].push(c);
+            row.appendChild(c.element);
+        }
+        tblBody.appendChild(row);
     }
+    this.element.appendChild(tblBody);
+    e = document.querySelector("#theWorldContainer");
+    e.appendChild(this.element);
+}
+
+World.prototype.starterPack = function () {
+    this.getCell(8, 8).neighbors().forEach((i) => i.live());
+    // flower
+    this.getCell(31, 20).live();
+    this.getCell(30, 21).live();
+    this.getCell(32, 21).live();
+    this.getCell(30, 22).live();
+    this.getCell(31, 22).live();
+    this.getCell(32, 22).live();
+    this.getCell(31, 23).live();
+    // faces
+    this.getCell(40, 55).live();
+    this.getCell(41, 55).live();
+    this.getCell(43, 55).live();
+    this.getCell(44, 55).live();
+    this.getCell(40, 56).live();
+    this.getCell(44, 56).live();
+    this.getCell(41, 57).live();
+    this.getCell(42, 57).live();
+    this.getCell(43, 57).live();
+    this.getCell(42, 58).live();
 }
 
 Cell.prototype.live = function () {
@@ -87,22 +111,22 @@ Cell.prototype.die = function () {
 }
 
 Cell.prototype.update = function () {
-    getPosition(this.x, this.y).className = this.nextClassName;
+    this.element.className = this.nextClassName;
 }
 
 Cell.prototype.neighbors = function () {
-    const nbs = neighborhood(this.x, this.y);
+    const nbs = neighborhood(this.x, this.y, this.world);
     nb_cells = [];
     for (let i = 0; i < nbs.length; i++) {
         x = nbs[i][0];
         y = nbs[i][1];
-        nb_cells.push(theWorld[x][y]);
+        nb_cells.push(this.world.getCell(x, y));
     }
     return nb_cells;
 }
 
 Cell.prototype.isAlive = function () {
-    return getPosition(this.x, this.y).className === "alive";
+    return this.element.className === "alive";
 }
 
 Cell.prototype.tick = function () {
@@ -113,7 +137,7 @@ Cell.prototype.tick = function () {
             nbsAlive++;
         }
     }
-    this.nextClassName = getPosition(this.x, this.y).className;
+    this.nextClassName = this.element.className;
     if (this.isAlive() && (nbsAlive < 2 || nbsAlive > 3)) {
         this.die();
     } else if (! this.isAlive() && nbsAlive === 3) {
@@ -121,50 +145,29 @@ Cell.prototype.tick = function () {
     }
 }
 
-
-theWorld[8][8].neighbors().forEach((i) => i.live());
-// flower
-theWorld[31][20].live();
-theWorld[30][21].live();
-theWorld[32][21].live();
-theWorld[30][22].live();
-theWorld[31][22].live();
-theWorld[32][22].live();
-theWorld[31][23].live();
-// faces
-theWorld[40][55].live();
-theWorld[41][55].live();
-theWorld[43][55].live();
-theWorld[44][55].live();
-theWorld[40][56].live();
-theWorld[44][56].live();
-theWorld[41][57].live();
-theWorld[42][57].live();
-theWorld[43][57].live();
-theWorld[42][58].live();
-
-function update() {
-    for (i = 0; i < theWorld.length; i++) {
-        for (j = 0; j < theWorld[i].length; j++) {
-            theWorld[i][j].update();
+World.prototype.update = function () {
+    for (i = 0; i < this.cells.length; i++) {
+        for (j = 0; j < this.cells[i].length; j++) {
+            this.cells[i][j].update();
         }
     }
 }
 
-function tick() {
-    for (i = 0; i < theWorld.length; i++) {
-        for (j = 0; j < theWorld[i].length; j++) {
-            theWorld[i][j].tick();
+World.prototype.tick = function () {
+    for (i = 0; i < this.cells.length; i++) {
+        for (j = 0; j < this.cells[i].length; j++) {
+            this.cells[i][j].tick();
         }
     }
 }
 
-function frame() {
-    tick();
-    update();
+World.prototype.frame = function () {
+    this.tick();
+    this.update();
 }
 
-update();
+const world = new World(START_ROWS, START_COLUMNS);
+world.generateTable();
 
 let intervalId;
 
@@ -173,10 +176,30 @@ document.addEventListener("keydown", function (e) {
         clearInterval(intervalId);
         intervalId = null;
     } else {
-        intervalId = setInterval(frame, FRAME_DURATION_MS);
+        intervalId = setInterval(() => world.frame(), FRAME_DURATION_MS);
     }
 });
 
 document.querySelector(".modal").addEventListener("click", function (e) {
     e.currentTarget.style.display = "none";
+});
+
+document.querySelector("#reset-game-button").addEventListener("click", function (e) {
+    world.element.remove();
+    world.cells = [];
+    world.element = null;
+    console.log("Game reset");
+    const selected_rows = document.querySelector("#world-height-input").value;
+    const selected_columns = document.querySelector("#world-width-input").value;
+    console.log(selected_rows);
+    console.log(selected_columns);
+    world.num_rows = selected_rows;
+    world.num_columns = selected_columns;
+    world.generateTable();
+});
+
+document.querySelector("#add-starter-pack-button").addEventListener("click", function (e) {
+    console.log("Add starter pack");
+    world.starterPack();
+    world.update();
 });
