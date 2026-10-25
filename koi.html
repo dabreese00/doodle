@@ -23,6 +23,7 @@
     var scale;
     var cx;
     var cy;
+    var perf = false;
 
     function handleResize() {
       canvas.width = window.innerWidth;
@@ -35,14 +36,33 @@
     window.addEventListener("resize", handleResize);
     handleResize();
 
+    function clickFunc(e) {
+      if (e.touches) {
+        e.preventDefault();
+        canvas.removeEventListener("touchend", clickFunc);
+        canvas.addEventListener("click", clickFunc);
+      }
+      perf = ! perf;
+    }
+
+    function touchFunc() {
+      canvas.removeEventListener("click", clickFunc);
+      canvas.addEventListener("touchend", clickFunc);
+    }
+
+    window.onload = function () {
+      canvas.addEventListener("click", clickFunc);
+      canvas.addEventListener("touchstart", touchFunc);
+    };
+
     function compute(i, n, t, cc, sf, sa) {
-      var y = i / 500.0;
-      var k = Math.cos(y * 5.3 * sf) * (y < 8.6 ? 22.0 : 10.5);
+      const y = i / 500.0;
+      const k = Math.cos(y * 5.3 * sf) * (y < 8.6 ? 22.0 : 10.5);
       if (Math.abs(k) < 1e-6) return null;
-      var e = y / 7.6 - 13.4;
-      var o = Math.sqrt(k * k + e * e) / 6.2;
-      var q = (k * y / 12.4 + 71 + Math.sin(y * 1.1) / k + k * Math.cos(y / 2.1) * 1.9 * Math.sin(o * 3.1 - e / 1.9 - t)) * sa;
-      var c = o * e / 18.4 + t / 8 + (i % cc) * 8.0;
+      const e = y / 7.6 - 13.4;
+      const o = Math.sqrt(k * k + e * e) / 6.2;
+      const q = (k * y / 12.4 + 71 + Math.sin(y * 1.1) / k + k * Math.cos(y / 2.1) * 1.9 * Math.sin(o * 3.1 - e / 1.9 - t)) * sa;
+      const c = o * e / 18.4 + t / 8 + (i % cc) * 8.0;
       return [q * Math.cos(c) + 200, 200 + q * Math.sin(c) + 93 * Math.cos(c / 2) + 6 * Math.sin(c * 1.5)];
     }
 
@@ -54,23 +74,95 @@
 
     context.fillStyle = "red";
 
-    var tick = 0;
-    function onTick () {
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      var pts = [];
+    // Convert coordinates to array indices for ImageData object
+    function getColorIndicesForCoord(x, y, width) {
+      const red = y * (width * 4) + x * 4;
+      // red, green, blue, alpha
+      return [red, red + 1, red + 2, red + 3];
+    }
+
+    // Turn the pixel at coordinates (x, y) red in a blank ImageData
+    // object of width "width".
+    function turnRed(x, y, width, imageData) {
+      var r, g, b, a;
+      [r, g, b, a] = getColorIndicesForCoord(x, y, width);
+      imageData.data[r] = 255;
+      imageData.data[a] = 255;
+    }
+
+    function softBrush(x, y, width, imageData) {
+      var r, g, b, a;
+      [r, g, b, a] = getColorIndicesForCoord(x, y, width);
+      imageData.data[r] = 255;
+      imageData.data[a] = 255;
+
+      const neighbors = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]];
+      const corners = [[x - 1, y - 1], [x - 1, y + 1], [x + 1, y - 1], [x + 1, y + 1]];
+      const neighborAmount = 100;
+      const cornerAmount = 40;
+      for (var i = 3; i >= 0; i--) {
+        [nX, nY] = [neighbors[i][0], neighbors[i][1]];
+        [r, g, b, a] = getColorIndicesForCoord(nX, nY, width);
+        imageData.data[r] += neighborAmount;
+        imageData.data[a] = 255;
+      }
+    }
+      
+    // Generate all n points to draw in the frame, as xy coordinates
+    // in a flat array.
+    function points() {
+      const pts = [];
       var writeIdx = 0;
-      for (i = n - 1; i >= 0; i--) {
+      for (var i = n - 1; i >= 0; i--) {
         const r = compute(i, n, tick, cc, sf, sa);
         if (r == null) continue;
         const [px, py] = r;
         if (px == Infinity || py == Infinity) continue;
-        // pts[writeIdx++] = cx + (px - 200) * scale;
-        // pts[writeIdx++] = cy + (py - 200) * scale;
-        context.fillRect(cx + (px - 200) * scale, cy + (py - 200) * scale, 1, 1);
+        pts[writeIdx++] = cx + (px - 200) * scale;
+        pts[writeIdx++] = cy + (py - 200) * scale;
       }
-      tick = tick + t;
-      requestAnimationFrame(onTick);
+      return pts;
     }
+
+    function renderByImageData(pts) {
+      const pixgrid = context.createImageData(canvas.width, canvas.height);
+      pts = pts.map(Math.floor);
+      var readIdx = 0;
+      for (var i = n - 1; i >= 0; i--) {
+        x = pts[readIdx++];
+        y = pts[readIdx++];
+        turnRed(x, y, canvas.width, pixgrid);
+      }
+      context.putImageData(pixgrid, 0, 0);
+    }
+
+    function renderByFillRect(pts) {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      var readIdx = 0;
+      for (var i = n - 1; i >= 0; i--) {
+        x = pts[readIdx++];
+        y = pts[readIdx++];
+        context.fillRect(x, y, 1, 1);
+      }
+    }
+
+    // Render the points pts (flat array of xy coords) onto the
+    // canvas, using a render method determined by the perf setting.
+    function renderFrame(pts, perf) {
+      if (perf) {
+        renderByImageData(pts)
+      } else {
+        renderByFillRect(pts)
+      }
+    }
+
+    function onTick() {
+        pts = points();
+        renderFrame(pts, perf);
+        tick = tick + t;
+        requestAnimationFrame(onTick);
+    }
+    var tick = 0;
     onTick();
   </script>
 </body>
