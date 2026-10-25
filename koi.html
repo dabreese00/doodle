@@ -26,8 +26,8 @@
     var perf = false;
 
     function handleResize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      canvas.width = window.innerWidth - 1;
+      canvas.height = window.innerHeight - 1;
       scale = (Math.min(canvas.width, canvas.height) / 400.0)
       cx = canvas.width / 2;
       cy = canvas.height / 2;
