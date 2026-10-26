@@ -21,23 +21,28 @@
     const canvas = document.getElementById("canvas");
     const context = canvas.getContext("2d");
     var scale;
-    var cx;
-    var cy;
+    var centerX;
+    var centerY;
     var perf = false;
+    var tick = 0;
+    const shapeFreq     = 1.0; // shape frequency
+    const shapeAmp      = 1.0; //shape amp
+    const creatureCount = 3; // creature count
+    const pointCount    = 20000; // point count
+    const step          = Math.PI / 60; // time step
+    const dotColor      = "red";
 
     function handleResize() {
       canvas.width = window.innerWidth - 1;
       canvas.height = window.innerHeight - 1;
       scale = (Math.min(canvas.width, canvas.height) / 400.0)
-      cx = canvas.width / 2;
-      cy = canvas.height / 2;
+      centerX = canvas.width / 2;
+      centerY = canvas.height / 2;
     }
-
-    window.addEventListener("resize", handleResize);
-    handleResize();
 
     function clickFunc(e) {
       if (e.touches) {
+        // Handle both touch and click: https://stackoverflow.com/a/54338720
         e.preventDefault();
         canvas.removeEventListener("touchend", clickFunc);
         canvas.addEventListener("click", clickFunc);
@@ -45,16 +50,29 @@
       perf = ! perf;
     }
 
+    // Handle both touch and click: https://stackoverflow.com/a/54338720
     function touchFunc() {
       canvas.removeEventListener("click", clickFunc);
       canvas.addEventListener("touchend", clickFunc);
     }
 
     window.onload = function () {
+      window.addEventListener("resize", handleResize);
+      // Handle both touch and click: https://stackoverflow.com/a/54338720
       canvas.addEventListener("click", clickFunc);
       canvas.addEventListener("touchstart", touchFunc);
     };
 
+    handleResize();
+
+    // The base algorithm
+    // Return a single point (in x, y coordinate form) to draw
+    // i = current point index
+    // n = total point count
+    // t = current tick / frame
+    // cc = creature count
+    // sf = shape frequency
+    // sa = shape amplitude
     function compute(i, n, t, cc, sf, sa) {
       const y = i / 500.0;
       const k = Math.cos(y * 5.3 * sf) * (y < 8.6 ? 22.0 : 10.5);
@@ -66,23 +84,17 @@
       return [q * Math.cos(c) + 200, 200 + q * Math.sin(c) + 93 * Math.cos(c / 2) + 6 * Math.sin(c * 1.5)];
     }
 
-    const sf    = 1.0; // shape frequency
-    const sa    = 1.0; //shape amp
-    const cc    = 3; // creature count
-    const n     = 20000; // point count
-    const t     = Math.PI / 60; // time step
-
-    context.fillStyle = "red";
-
-    // Convert coordinates to array indices for ImageData object
+    // Helper: Convert coordinates to array indices for ImageData object
+    // ref: https://developer.mozilla.org/en-US/docs/Web/API/ImageData
     function getColorIndicesForCoord(x, y, width) {
       const red = y * (width * 4) + x * 4;
       // red, green, blue, alpha
       return [red, red + 1, red + 2, red + 3];
     }
 
-    // Turn the pixel at coordinates (x, y) red in a blank ImageData
-    // object of width "width".
+    // Helper: Turn the pixel at coordinates (x, y) red, in a blank ImageData
+    // array of width "width".
+    // ref: https://developer.mozilla.org/en-US/docs/Web/API/ImageData
     function turnRed(x, y, width, imageData) {
       var r, g, b, a;
       [r, g, b, a] = getColorIndicesForCoord(x, y, width);
@@ -90,45 +102,48 @@
       imageData.data[a] = 255;
     }
 
-    function softBrush(x, y, width, imageData) {
-      var r, g, b, a;
-      [r, g, b, a] = getColorIndicesForCoord(x, y, width);
-      imageData.data[r] = 255;
-      imageData.data[a] = 255;
+    // // Helper: Paint a point with a little soft halo around it, instead of just
+    // // one pixel.  Alternative to "turnRed".
+    // function softBrush(x, y, width, imageData) {
+    //   var r, g, b, a;
+    //   [r, g, b, a] = getColorIndicesForCoord(x, y, width);
+    //   imageData.data[r] = 255;
+    //   imageData.data[a] = 255;
 
-      const neighbors = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]];
-      const corners = [[x - 1, y - 1], [x - 1, y + 1], [x + 1, y - 1], [x + 1, y + 1]];
-      const neighborAmount = 100;
-      const cornerAmount = 40;
-      for (var i = 3; i >= 0; i--) {
-        [nX, nY] = [neighbors[i][0], neighbors[i][1]];
-        [r, g, b, a] = getColorIndicesForCoord(nX, nY, width);
-        imageData.data[r] += neighborAmount;
-        imageData.data[a] = 255;
-      }
-    }
+    //   const neighbors = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]];
+    //   const corners = [[x - 1, y - 1], [x - 1, y + 1], [x + 1, y - 1], [x + 1, y + 1]];
+    //   const neighborAmount = 100;
+    //   const cornerAmount = 40;
+    //   for (var i = 3; i >= 0; i--) {
+    //     [nX, nY] = [neighbors[i][0], neighbors[i][1]];
+    //     [r, g, b, a] = getColorIndicesForCoord(nX, nY, width);
+    //     imageData.data[r] += neighborAmount;
+    //     imageData.data[a] = 255;
+    //   }
+    // }
       
-    // Generate all n points to draw in the frame, as xy coordinates
-    // in a flat array.
+    // Generate all n points to draw in the frame, as xy float coordinates, 
+    // in a flat 1d array.
     function points() {
       const pts = [];
       var writeIdx = 0;
-      for (var i = n - 1; i >= 0; i--) {
-        const r = compute(i, n, tick, cc, sf, sa);
+      for (var i = pointCount - 1; i >= 0; i--) {
+        const r = compute(i, pointCount, tick, creatureCount, shapeFreq, shapeAmp);
         if (r == null) continue;
         const [px, py] = r;
         if (px == Infinity || py == Infinity) continue;
-        pts[writeIdx++] = cx + (px - 200) * scale;
-        pts[writeIdx++] = cy + (py - 200) * scale;
+        pts[writeIdx++] = centerX + (px - 200) * scale;
+        pts[writeIdx++] = centerY + (py - 200) * scale;
       }
       return pts;
     }
 
+    // Render implementation: by constructing and displaying an ImageData array
     function renderByImageData(pts) {
       const pixgrid = context.createImageData(canvas.width, canvas.height);
       pts = pts.map(Math.floor);
       var readIdx = 0;
-      for (var i = n - 1; i >= 0; i--) {
+      for (var i = pointCount - 1; i >= 0; i--) {
         x = pts[readIdx++];
         y = pts[readIdx++];
         turnRed(x, y, canvas.width, pixgrid);
@@ -136,10 +151,12 @@
       context.putImageData(pixgrid, 0, 0);
     }
 
+    // Render implementation: by drawing an individual fillRect for each point
     function renderByFillRect(pts) {
       context.clearRect(0, 0, canvas.width, canvas.height);
       var readIdx = 0;
-      for (var i = n - 1; i >= 0; i--) {
+      context.fillStyle = dotColor;
+      for (var i = pointCount - 1; i >= 0; i--) {
         x = pts[readIdx++];
         y = pts[readIdx++];
         context.fillRect(x, y, 1, 1);
@@ -159,10 +176,9 @@
     function onTick() {
         pts = points();
         renderFrame(pts, perf);
-        tick = tick + t;
+        tick = tick + step;
         requestAnimationFrame(onTick);
     }
-    var tick = 0;
     onTick();
   </script>
 </body>
