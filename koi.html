@@ -23,8 +23,10 @@
     var scale;
     var centerX;
     var centerY;
-    var perf = false;
+    var perf = true; // determines rendering method
+    var scaling = true; // determine if high dpi scaling is used
     var tick = 0;
+    const origWidth     = 400;
     const shapeFreq     = 1.0; // shape frequency
     const shapeAmp      = 1.0; //shape amp
     const creatureCount = 3; // creature count
@@ -33,11 +35,25 @@
     const dotColor      = "red";
 
     function handleResize() {
-      canvas.width = window.innerWidth - 1;
-      canvas.height = window.innerHeight - 1;
-      scale = (Math.min(canvas.width, canvas.height) / 400.0)
+      const width = window.innerWidth;
+      const height = window.innerHeight - 1;
+      const dpr = window.devicePixelRatio;
+      if (scaling) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+      } else {
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = "";
+        canvas.style.height = "";
+      }
+      scale = Math.min(canvas.width, canvas.height) / origWidth;
       centerX = canvas.width / 2;
       centerY = canvas.height / 2;
+      offsetX = centerX - (scale * origWidth / 2);
+      offsetY = centerY - (scale * origWidth / 2);
     }
 
     function clickFunc(e) {
@@ -47,7 +63,16 @@
         canvas.removeEventListener("touchend", clickFunc);
         canvas.addEventListener("click", clickFunc);
       }
-      perf = ! perf;
+      // a click toggles through the perf and scaling settings
+      if (scaling) {
+        scaling = false;
+        perf = false;
+      } else if (! perf) {
+        perf = true;
+      } else if (perf && ! scaling) {
+        scaling = true;
+      }
+      handleResize();
     }
 
     // Handle both touch and click: https://stackoverflow.com/a/54338720
@@ -132,8 +157,8 @@
         if (r == null) continue;
         const [px, py] = r;
         if (px == Infinity || py == Infinity) continue;
-        pts[writeIdx++] = centerX + (px - 200) * scale;
-        pts[writeIdx++] = centerY + (py - 200) * scale;
+        pts[writeIdx++] = px;
+        pts[writeIdx++] = py;
       }
       return pts;
     }
@@ -141,11 +166,11 @@
     // Render implementation: by constructing and displaying an ImageData array
     function renderByImageData(pts) {
       const pixgrid = context.createImageData(canvas.width, canvas.height);
-      pts = pts.map(Math.floor);
+      pts = pts.map((a) => a * scale);
       var readIdx = 0;
       for (var i = pointCount - 1; i >= 0; i--) {
-        x = pts[readIdx++];
-        y = pts[readIdx++];
+        x = Math.floor(offsetX + pts[readIdx++]);
+        y = Math.floor(offsetY + pts[readIdx++]);
         turnRed(x, y, canvas.width, pixgrid);
       }
       context.putImageData(pixgrid, 0, 0);
@@ -154,11 +179,12 @@
     // Render implementation: by drawing an individual fillRect for each point
     function renderByFillRect(pts) {
       context.clearRect(0, 0, canvas.width, canvas.height);
-      var readIdx = 0;
       context.fillStyle = dotColor;
+      pts = pts.map((a) => a * scale);
+      var readIdx = 0;
       for (var i = pointCount - 1; i >= 0; i--) {
-        x = pts[readIdx++];
-        y = pts[readIdx++];
+        x = offsetX + pts[readIdx++];
+        y = offsetY + pts[readIdx++];
         context.fillRect(x, y, 1, 1);
       }
     }
@@ -174,10 +200,10 @@
     }
 
     function onTick() {
-        pts = points();
-        renderFrame(pts, perf);
-        tick = tick + step;
-        requestAnimationFrame(onTick);
+      pts = points();
+      renderFrame(pts, perf);
+      tick = tick + step;
+      requestAnimationFrame(onTick);
     }
     onTick();
   </script>
