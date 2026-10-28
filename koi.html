@@ -20,11 +20,12 @@
     // https://x.com/yuruyurau
     const canvas = document.getElementById("canvas");
     const context = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio;
     var scale;
     var centerX;
     var centerY;
     var perf = true; // determines rendering method
-    var scaling = true; // determine if high dpi scaling is used
+    var scaling = dpr <= 2; // determine resolution scaling approach
     var tick = 0;
     const origWidth     = 400;
     const shapeFreq     = 1.0; // shape frequency
@@ -37,7 +38,6 @@
     function handleResize() {
       const width = window.innerWidth;
       const height = window.innerHeight - 1;
-      const dpr = window.devicePixelRatio;
       if (scaling) {
         canvas.width = width * dpr;
         canvas.height = height * dpr;
