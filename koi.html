@@ -35,6 +35,10 @@
     const step          = Math.PI / 60; // Pi divided by # ticks per cycle
     const timeStep      = 18; // milliseconds per tick
     const dotColor      = "red"; // color to draw in
+    const hueStep       = 1 / pointCount;
+    const startHue      = 0;
+    const saturation    = 1;
+    const lightness     = 0.7;
 
     function handleResize() {
       const width = window.innerWidth;
@@ -127,26 +131,62 @@
       imageData.data[r] = 255;
       imageData.data[a] = 255;
     }
+    function colorImageDataPixel(x, y, r, g, b, width, imageData) {
+      var ri, gi, bi, ai;
+      [ri, gi, bi, ai] = getColorIndicesForCoord(x, y, width);
+      imageData.data[ri] = r;
+      imageData.data[gi] = g;
+      imageData.data[bi] = b;
+      imageData.data[ai] = 255;
+    }
 
-    // // Helper: Paint a point with a little soft halo around it, instead of just
-    // // one pixel.  Alternative to "turnRed".
-    // function softBrush(x, y, width, imageData) {
-    //   var r, g, b, a;
-    //   [r, g, b, a] = getColorIndicesForCoord(x, y, width);
-    //   imageData.data[r] = 255;
-    //   imageData.data[a] = 255;
 
-    //   const neighbors = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]];
-    //   const corners = [[x - 1, y - 1], [x - 1, y + 1], [x + 1, y - 1], [x + 1, y + 1]];
-    //   const neighborAmount = 100;
-    //   const cornerAmount = 40;
-    //   for (var i = 3; i >= 0; i--) {
-    //     [nX, nY] = [neighbors[i][0], neighbors[i][1]];
-    //     [r, g, b, a] = getColorIndicesForCoord(nX, nY, width);
-    //     imageData.data[r] += neighborAmount;
-    //     imageData.data[a] = 255;
-    //   }
-    // }
+    /**
+     * Converts an HSL color value to RGB. Conversion formula
+     * adapted from https://en.wikipedia.org/wiki/HSL_color_space.
+     * Assumes h, s, and l are contained in the set [0, 1] and
+     * returns r, g, and b in the set [0, 255].
+     *
+     * @param   {number}  h       The hue
+     * @param   {number}  s       The saturation
+     * @param   {number}  l       The lightness
+     * @return  {Array}           The RGB representation
+     * 
+     * source: https://stackoverflow.com/a/9493060
+     */
+    function hslToRgb(h, s, l) {
+      let r, g, b;
+
+      if (s === 0) {
+        r = g = b = l; // achromatic
+      } else {
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hueToRgb(p, q, h + 1/3);
+        g = hueToRgb(p, q, h);
+        b = hueToRgb(p, q, h - 1/3);
+      }
+
+      return [bRound(r), bRound(g), bRound(b)];
+    }
+
+    function hueToRgb(p, q, t) {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    }
+
+    // Based on comment to smooth out the innacuracies on the high and low ends, supposedly:
+    // https://stackoverflow.com/questions/2353211/hsl-to-rgb-color-conversion#comment58413965_9493060
+    function bRound(x) {
+      return Math.min(Math.floor(x * 256), 255);
+    }
+    /*
+    * End code sourced from https://stackoverflow.com/a/9493060
+    */
       
     // Generate all n points to draw in the frame, as xy float coordinates, 
     // in a flat 1d array.
@@ -164,28 +204,37 @@
       return pts;
     }
 
+    // Get the color to draw the next point in
+    function nextRgb(i) {
+      const firstHue = startHue + (tick / 9);
+      const hue = (firstHue + i * hueStep) % 1;
+      return hslToRgb(hue, saturation, lightness);
+    }
+
     // Render implementation: by constructing and displaying an ImageData array
-    function renderByImageData(pts) {
+    function renderByImageData(pts, colorFunc) {
       const pixgrid = context.createImageData(canvas.width, canvas.height);
       pts = pts.map((a) => a * scale);
       var readIdx = 0;
       for (var i = pointCount - 1; i >= 0; i--) {
         x = Math.floor(offsetX + pts[readIdx++]);
         y = Math.floor(offsetY + pts[readIdx++]);
-        turnRed(x, y, canvas.width, pixgrid);
+        [r, g, b] = colorFunc(i);
+        colorImageDataPixel(x, y, r, g, b, canvas.width, pixgrid);
       }
       context.putImageData(pixgrid, 0, 0);
     }
 
     // Render implementation: by drawing an individual fillRect for each point
-    function renderByFillRect(pts) {
+    function renderByFillRect(pts, colorFunc) {
       context.clearRect(0, 0, canvas.width, canvas.height);
-      context.fillStyle = dotColor;
       pts = pts.map((a) => a * scale);
       var readIdx = 0;
       for (var i = pointCount - 1; i >= 0; i--) {
         x = offsetX + pts[readIdx++];
         y = offsetY + pts[readIdx++];
+        [r, g, b] = colorFunc(i);
+        context.fillStyle = `rgb(${r} ${g} ${b})`;
         context.fillRect(x, y, 1, 1);
       }
     }
@@ -194,9 +243,9 @@
     // canvas, using a render method determined by the perf setting.
     function renderFrame(pts, perf) {
       if (perf) {
-        renderByImageData(pts)
+        renderByImageData(pts, nextRgb)
       } else {
-        renderByFillRect(pts)
+        renderByFillRect(pts, nextRgb)
       }
     }
 
