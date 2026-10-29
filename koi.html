@@ -27,13 +27,14 @@
     var perf = true; // determines rendering method
     var scaling = dpr <= 2; // determine resolution scaling approach
     var tick = 0;
-    const origWidth     = 400;
+    const origWidth     = 400; // basic pixel width of animation, for scaling/centering calibration
     const shapeFreq     = 1.0; // shape frequency
     const shapeAmp      = 1.0; //shape amp
     const creatureCount = 3; // creature count
     const pointCount    = 20000; // point count
-    const step          = Math.PI / 60; // time step
-    const dotColor      = "red";
+    const step          = Math.PI / 60; // Pi divided by # ticks per cycle
+    const timeStep      = 18; // milliseconds per tick
+    const dotColor      = "red"; // color to draw in
 
     function handleResize() {
       const width = window.innerWidth;
@@ -199,12 +200,26 @@
       }
     }
 
-    function onTick() {
-      pts = points();
-      renderFrame(pts, perf);
-      tick = tick + step;
-      requestAnimationFrame(onTick);
+    var lastTick = performance.now();
+    function animate(timestamp) {
+      if (timestamp - lastTick >= timeStep) {
+        pts = points();
+        renderFrame(pts, perf);
+        tick = tick + step;
+        requestAnimationFrame(animate);
+        lastTick = timestamp;
+      } else {
+        requestAnimationFrame(animate);
+      }
     }
-    onTick();
+
+    // start with timing allowance for initial browser delays
+    // see https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
+    var zero;
+    requestAnimationFrame(firstFrame);
+    function firstFrame(timestamp) {
+      zero = timestamp;
+      animate(timestamp);
+    }
   </script>
 </body>
